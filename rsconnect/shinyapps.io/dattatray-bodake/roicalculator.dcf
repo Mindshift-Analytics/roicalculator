@@ -1,0 +1,10 @@
+name: roicalculator
+title:
+username: dattatray-bodake
+account: dattatray-bodake
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 13480852
+bundleId: 9436788
+url: https://dattatray-bodake.shinyapps.io/roicalculator/
+version: 1
