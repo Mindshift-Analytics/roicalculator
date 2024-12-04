@@ -141,7 +141,7 @@ ui <- shinyUI(fluidPage(
                                  
                                  splitLayout(verbatimTextOutput("manpower_fte_total"),
                                              verbatimTextOutput("manpower_pte_total")),
-                                 h3("How you can acheive savings with Mindshift:"),
+                                 h3("How you can achieve savings with Mindshift:"),
                                  p("Mindshift offers the capability to automate manual data entry, updates, and analysis processes, facilitating a transition to a time-efficient fuel management method.\n
                                    This transition leads to cost savings and increased productivity for your organization.")),
                         )
