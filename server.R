@@ -1,3 +1,6 @@
+##Server code
+
+
 # Ensure the latest version of gt is installed
 if (!require("gt") || packageVersion("gt") < "0.3.0") {
   install.packages("gt")
@@ -29,10 +32,17 @@ server <- function(input, output, session) {
   
   # values-reactive Values relevant across all calculations put in a reactive for easier access
   values <- reactive({
-    req(all(!is.null(c(input$hemm_count, input$hemm_daily_consump, input$truck_count, input$logger_count_per_bowser)))) 
-    #checking input to prevent crashes
-    req(!is.null(input$shift_count), input$shift_count != 0)
+    req(!is.null(input$hemm_count) && !is.null(input$hemm_daily_consump) && !is.null(input$truck_count) && !is.null(input$logger_count_per_bowser) &&
+    !is.null(input$shift_count) && input$shift_count != 0 && !is.null(input$fuel_entry_count) && input$fuel_entry_count > 0)
 
+
+	# Default values for inputs when NULL
+	hemm_count <- ifelse(is.null(input$hemm_count) || input$hemm_count == "", 0, input$hemm_count)
+	hemm_daily_consump <- ifelse(is.null(input$hemm_daily_consump) || input$hemm_daily_consump == "", 0, input$hemm_daily_consump)
+	shift_count <- ifelse(is.null(input$shift_count) || input$shift_count == "", 1, input$shift_count)
+	fuel_entry_count <- ifelse(is.null(input$fuel_entry_count) || input$fuel_entry_count == "", 0, input$fuel_entry_count)
+
+	
     # these variables are out since they are being used for calculation in data frame
     # data frame scope prevents creation and usage in the same scope hence outside creation
     entries_per_year = req(input$fuel_entry_count) * 365
@@ -618,18 +628,26 @@ server <- function(input, output, session) {
     middle_pos = cost.df()$Saved/2
     
     gg <- ggplot(data) +
-      geom_bar(aes(x = Category, y = Metrics, fill="original",text=orig_explanation), stat = "identity", position="dodge") +
-      geom_bar(aes(x = Category, y = saved_value, fill="saved",text=saved_explanation), stat = "identity", position="dodge") +
-      geom_text(aes(x = Category, y = middle_pos, label = paste("₹",format_indian(saved_value))), vjust = 0, size = 4,color="white") +
-      geom_text(aes(x= Category, y = 0.8*cost.df()$Cost, label = paste("₹",format_indian(Metrics))), vjust=0, size = 3.5,color="white") +
-      scale_fill_manual(values = c("original" = "blue", "saved" = "orange")) +
-      labs(fill = "Saving Comparisions") +
-      theme(legend.position = "none")
-    
-    # Convert ggplot object to plotly for interactive plots
-    p_plotly <- ggplotly(gg, tooltip = "text")
-    
-    return(p_plotly)
+ 	 # Removed `text` aesthetic from geom_bar()
+  	geom_bar(aes(x = Category, y = Metrics, fill = "original"), stat = "identity", position = "dodge") +
+  	geom_bar(aes(x = Category, y = saved_value, fill = "saved"), stat = "identity", position = "dodge") +
+  
+  # Adding text annotations for saved values
+  	geom_text(aes(x = Category, y = middle_pos, label = paste("₹", format_indian(saved_value))), 
+            vjust = 0, size = 4, color = "white") +
+  
+  # Adding text annotations for Metrics
+   geom_text(aes(x = Category, y = 0.8 * Metrics, label = paste("₹", format_indian(Metrics))), 
+            vjust = 0, size = 3.5, color = "white") +
+  
+  
+   scale_fill_manual(values = c("original" = "blue", "saved" = "orange")) +
+   labs(fill = "Saving Comparisons") +
+   theme(legend.position = "none")
+
+
+  p_plotly <- ggplotly(gg, tooltip = c("x", "y"))
+  p_plotly
   })
   
   output$manpower_summation_current <- renderText({
@@ -737,13 +755,39 @@ server <- function(input, output, session) {
     )
     
     # Create bar plot using ggplot2
+    server <- function(input, output) {
+  
+  output$histogram <- renderPlotly({
+    # Assuming 'data' is your dataset containing the necessary variables
+    data <- data.frame(Category = c("A", "B", "C"),
+                       Metrics = c(10, 15, 20),
+                       orig_explanation = c("Explanation 1", "Explanation 2", "Explanation 3"),
+                       saved_value = c(5, 10, 15),
+                       saved_explanation = c("Saved Explanation 1", "Saved Explanation 2", "Saved Explanation 3"))
+    
     p <- ggplot(data) +
-      geom_bar(aes(x=Category, y=original, fill="saved_col", text=orig_explanation),stat = "identity",position = "dodge") +
-      # geom_bar(aes(x=Category, y=saved, fill="saved_col", text=saved_explanation),stat = "identity",position = "dodge",width=0.8) +
-      geom_text(aes(x=Category, y=saved/2, label=format_indian(saved)), vjust=0,size=5,color="white") +
-      scale_fill_manual(values = c("original_col" = "blue", "saved_col" = "orange")) +
-      labs(fill = "Saving Comparisions") +
+      # Original Bar Plot
+      geom_bar(aes(x = Category, y = Metrics, fill = "original"), stat = "identity", position = "dodge") +
+      # Adding text annotations for the original values
+      geom_text(aes(x = Category, y = Metrics, label = orig_explanation), 
+                position = position_dodge(width = 0.9), vjust = -0.5, size = 4) +
+
+      # Additional Bar Plot for saved values
+      geom_bar(aes(x = Category, y = saved_value, fill = "saved"), stat = "identity", position = "dodge") +
+      # Adding text annotations for the saved values
+      geom_text(aes(x = Category, y = saved_value, label = saved_explanation), 
+                position = position_dodge(width = 0.9), vjust = -0.5, size = 4) +
+      
+      # Fill Colors and Themes
+      scale_fill_manual(values = c("original" = "blue", "saved" = "orange")) +
+      labs(fill = "Saving Comparisons") +
       theme(legend.position = "none")
+
+      ggplotly(p)
+  })
+  
+}
+
     
     
     # Convert ggplot object to plotly for interactive plots
