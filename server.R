@@ -1,9 +1,3 @@
-# Ensure the latest version of gt is installed
-if (!require("gt") || packageVersion("gt") < "0.3.0") {
-  install.packages("gt")
-}
-
-# Load libraries
 library(shiny)
 library(DT)
 library(ggplot2)
@@ -11,7 +5,6 @@ library(plotly)
 library(stringr)
 library(scales)
 library(gt)
-
 options(scipen = 999)
 
 server <- function(input, output, session) {
@@ -30,8 +23,6 @@ server <- function(input, output, session) {
   # values-reactive Values relevant across all calculations put in a reactive for easier access
   values <- reactive({
     req(all(!is.null(c(input$hemm_count, input$hemm_daily_consump, input$truck_count, input$logger_count_per_bowser)))) 
-    #checking input to prevent crashes
-    req(!is.null(input$shift_count), input$shift_count != 0)
 
     # these variables are out since they are being used for calculation in data frame
     # data frame scope prevents creation and usage in the same scope hence outside creation
@@ -612,24 +603,39 @@ server <- function(input, output, session) {
       paste("With a predicted reduction of",input$manpower_reduction_accountant," in <b>Accountants<b>, Updated Cost is: <b>₹",format_indian(cost.df()$Saved[4]),"/-</b>") #Accountant
     )
     
+    # Assuming cost.df() returns a dataframe with Titles, Cost, and Saved columns.
     data <- data.frame(cost.df()$Titles, cost.df()$Cost, cost.df()$Saved)
-    colnames(data) <- c("Category","Metrics","saved_value")
+    colnames(data) <- c("Category", "Metrics", "saved_value")
     
-    middle_pos = cost.df()$Saved/2
+    # Calculate the middle position for text alignment
+    middle_pos = data$saved_value / 2 
     
+    # Create the ggplot for Side-by-Side Bars
+    # Create bar plot using ggplot2
+    # Create bar plot using ggplot2
     gg <- ggplot(data) +
-      geom_bar(aes(x = Category, y = Metrics, fill="original",text=orig_explanation), stat = "identity", position="dodge") +
-      geom_bar(aes(x = Category, y = saved_value, fill="saved",text=saved_explanation), stat = "identity", position="dodge") +
-      geom_text(aes(x = Category, y = middle_pos, label = paste("₹",format_indian(saved_value))), vjust = 0, size = 4,color="white") +
-      geom_text(aes(x= Category, y = 0.8*cost.df()$Cost, label = paste("₹",format_indian(Metrics))), vjust=0, size = 3.5,color="white") +
+      geom_bar(aes(x = Category, y = Metrics, fill="original", text=orig_explanation), stat = "identity", position = position_dodge(width = 0.8)) +
+      geom_bar(aes(x = Category, y = saved_value, fill="saved", text=saved_explanation), stat = "identity", position = position_dodge(width = 0.8), width = 0.6) +
+      geom_text(aes(x = Category, y = middle_pos, label = paste("₹", format_indian(saved_value))), vjust = 0, size = 4, color="white") +
+      geom_text(aes(x = Category, y = 0.8*cost.df()$Cost, label = paste("₹", format_indian(Metrics))), vjust = 0, size = 3.5, color="white") +
       scale_fill_manual(values = c("original" = "blue", "saved" = "orange")) +
-      labs(fill = "Saving Comparisions") +
+      labs(fill = "Saving Comparisons") +
       theme(legend.position = "none")
     
     # Convert ggplot object to plotly for interactive plots
     p_plotly <- ggplotly(gg, tooltip = "text")
     
     return(p_plotly)
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
   })
   
   output$manpower_summation_current <- renderText({
@@ -737,19 +743,27 @@ server <- function(input, output, session) {
     )
     
     # Create bar plot using ggplot2
+    # Assuming 'data' is already prepared
     p <- ggplot(data) +
-      geom_bar(aes(x=Category, y=original, fill="saved_col", text=orig_explanation),stat = "identity",position = "dodge") +
-      # geom_bar(aes(x=Category, y=saved, fill="saved_col", text=saved_explanation),stat = "identity",position = "dodge",width=0.8) +
-      geom_text(aes(x=Category, y=saved/2, label=format_indian(saved)), vjust=0,size=5,color="white") +
+      geom_bar(aes(x=Category, y=original, fill="original_col", text=orig_explanation), stat = "identity", position = position_dodge(width = 0.8)) +
+      geom_bar(aes(x=Category, y=saved, fill="saved_col", text=saved_explanation), stat = "identity", position = position_dodge(width = 0.8), width = 0.6) +
+      geom_text(aes(x=Category, y=saved/2, label=format_indian(saved)), vjust=0, size=5, color="white") +
       scale_fill_manual(values = c("original_col" = "blue", "saved_col" = "orange")) +
-      labs(fill = "Saving Comparisions") +
+      labs(fill = "Saving Comparisons") +
       theme(legend.position = "none")
-    
     
     # Convert ggplot object to plotly for interactive plots
     p_plotly <- ggplotly(p, tooltip = c("x", "text"))
     
     return(p_plotly)
+    
+    
+    
+    
+    
+    
+    
+    
   })
   
   output$pilferage_explanation <- renderText({
@@ -996,17 +1010,30 @@ server <- function(input, output, session) {
         paste("After Mindshift <b>",idle_total()$idle_mod_consump_lpd," litres</b> of fuel is consumed per day"))
     )
     
+    # Create bar plot using ggplot2
+    # Assuming 'data' is already prepared
     gg <- ggplot(data, aes(y = title, x = value, fill = type, text=explanation)) +
-      geom_bar(stat = "identity", position = position_dodge(width = 1)) +
-      geom_text(aes(x=value/2,label = format_indian(value)),
-                position = position_dodge(width = 1),
-                vjust = 0.5, hjust = -0.3, size = 5,color="white") +
+      geom_bar(stat = "identity", position = position_dodge(width = 0.8), width = 0.6) +
+      geom_text(aes(x=value/2, label = format_indian(value)),
+                position = position_dodge(width = 0.8),
+                vjust = 0.5, hjust = -0.3, size = 5, color="white") +
       scale_fill_manual(values = c("Original" = "blue", "Saved" = "orange")) +
-      labs(fill = "Saving Comparisons",x="Litres Consumed /HEMM/Day",y="Comparision Before After") +
+      labs(fill = "Saving Comparisons", x="Litres Consumed /HEMM/Day", y="Comparison Before After") +
       theme(legend.position = "none") +
       coord_flip()
     
     ggplotly(gg, tooltip = "text")
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
   })
   
   
