@@ -612,23 +612,33 @@ server <- function(input, output, session) {
     )
     
     data <- data.frame(cost.df()$Titles, cost.df()$Cost, cost.df()$Saved)
-    colnames(data) <- c("Category","Metrics","saved_value")
+    colnames(data) <- c("Category", "Metrics", "saved_value")
     
-    middle_pos = cost.df()$Saved/2
+    # Reshape data to long format for ggplot
+    data_long <- data.frame(
+      Category = rep(data$Category, 2),
+      Value = c(data$Metrics, data$saved_value),
+      Type = rep(c("Metrics", "Saved"), each = nrow(data))
+    )
     
-    gg <- ggplot(data) +
-      geom_bar(aes(x = Category, y = Metrics, fill="original",text=orig_explanation), stat = "identity", position="dodge") +
-      geom_bar(aes(x = Category, y = saved_value, fill="saved",text=saved_explanation), stat = "identity", position="dodge") +
-      geom_text(aes(x = Category, y = middle_pos, label = paste("₹",format_indian(saved_value))), vjust = 0, size = 4,color="white") +
-      geom_text(aes(x= Category, y = 0.8*cost.df()$Cost, label = paste("₹",format_indian(Metrics))), vjust=0, size = 3.5,color="white") +
-      scale_fill_manual(values = c("original" = "blue", "saved" = "orange")) +
-      labs(fill = "Saving Comparisions") +
+    # Create the stacked bar chart with position_dodge()
+    gg <- ggplot(data_long, aes(x = Category, y = Value, fill = Type, text = ifelse(Type == "Metrics", orig_explanation, saved_explanation))) +
+      geom_bar(stat = "identity", position = position_dodge(width = 0.8)) +  # Dodge bars to be side by side
+      
+      # Add text labels for Metrics and Saved values
+      geom_text(aes(y = Value / 2, label = paste("₹", format_indian(Value))), position = position_dodge(width = 0.7), vjust = 0.5, size = 4, color = "white") +
+      
+      scale_fill_manual(values = c("Metrics" = "blue", "Saved" = "orange")) +
+      labs(fill = "Saving Comparisons") +
       theme(legend.position = "none")
     
-    # Convert ggplot object to plotly for interactive plots
+    # Convert ggplot object to plotly for interactivity
     p_plotly <- ggplotly(gg, tooltip = "text")
     
+    # Return the interactive plot
     return(p_plotly)
+    
+    
   })
   
   output$manpower_summation_current <- renderText({
