@@ -28,9 +28,22 @@ server <- function(input, output, session) {
   
   # values-reactive Values relevant across all calculations put in a reactive for easier access
   values <- reactive({
-    req(all(!is.null(c(input$hemm_count, input$hemm_daily_consump, input$truck_count, input$logger_count_per_bowser)))) 
-    #checking input to prevent crashes
-    req(!is.null(input$shift_count), input$shift_count != 0)
+  # Fallback logic if values are missing
+  shift_count <- ifelse(is.null(input$shift_count) || input$shift_count <= 0, 1, input$shift_count)
+  hemm_count <- ifelse(is.null(input$hemm_count) || input$hemm_count <= 0, 1, input$hemm_count)
+  fuel_consumption <- ifelse(is.null(input$hemm_daily_consump) || input$hemm_daily_consump <= 0, 100, input$hemm_daily_consump)
+  truck_count <- ifelse(is.null(input$truck_count) || input$truck_count <= 0, 1, input$truck_count)
+  logger_count <- ifelse(is.null(input$logger_count_per_bowser) || input$logger_count_per_bowser <= 0, 1, input$logger_count_per_bowser)
+
+  # validation message for input values
+  validate(
+    need(input$shift_count > 0, "Please enter a positive number for Shift Count."),
+    need(input$hemm_count > 0, "Please enter a positive number for Number of HEMM."),
+    need(input$hemm_daily_consump > 0, "Please enter a positive number for HEMM Fuel Consumption/Day."),
+    need(input$truck_count > 0, "Please enter a positive number for Number of Trucks."),
+    need(input$logger_count_per_bowser > 0, "Please enter a positive number for Number of Loggers per Bowser.")
+    )
+
 
     # these variables are out since they are being used for calculation in data frame
     # data frame scope prevents creation and usage in the same scope hence outside creation
@@ -611,32 +624,24 @@ server <- function(input, output, session) {
       paste("With a predicted reduction of",input$manpower_reduction_accountant," in <b>Accountants<b>, Updated Cost is: <b>₹",format_indian(cost.df()$Saved[4]),"/-</b>") #Accountant
     )
     
-    # Assuming cost.df() returns a dataframe with Titles, Cost, and Saved columns.
     data <- data.frame(cost.df()$Titles, cost.df()$Cost, cost.df()$Saved)
-    colnames(data) <- c("Category", "Metrics", "saved_value")
+    colnames(data) <- c("Category","Metrics","saved_value")
     
-    # Calculate the middle position for text alignment
-    middle_pos = data$saved_value / 2 
+    middle_pos = cost.df()$Saved/2
     
-    # Create the ggplot for Side-by-Side Bars
-    # Create bar plot using ggplot2
-    # Create bar plot using ggplot2
     gg <- ggplot(data) +
-      geom_bar(aes(x = Category, y = Metrics, fill="original", text=orig_explanation), stat = "identity", position = position_dodge(width = 0.8)) +
-      geom_bar(aes(x = Category, y = saved_value, fill="saved", text=saved_explanation), stat = "identity", position = position_dodge(width = 0.8), width = 0.6) +
-      geom_text(aes(x = Category, y = middle_pos, label = paste("₹", format_indian(saved_value))), vjust = 0, size = 4, color="white") +
-      geom_text(aes(x = Category, y = 0.8*cost.df()$Cost, label = paste("₹", format_indian(Metrics))), vjust = 0, size = 3.5, color="white") +
+      geom_bar(aes(x = Category, y = Metrics, fill="original",text=orig_explanation), stat = "identity", position="dodge") +
+      geom_bar(aes(x = Category, y = saved_value, fill="saved",text=saved_explanation), stat = "identity", position="dodge") +
+      geom_text(aes(x = Category, y = middle_pos, label = paste("₹",format_indian(saved_value))), vjust = 0, size = 4,color="white") +
+      geom_text(aes(x= Category, y = 0.8*cost.df()$Cost, label = paste("₹",format_indian(Metrics))), vjust=0, size = 3.5,color="white") +
       scale_fill_manual(values = c("original" = "blue", "saved" = "orange")) +
-      labs(fill = "Saving Comparisons") +
+      labs(fill = "Saving Comparisions") +
       theme(legend.position = "none")
     
     # Convert ggplot object to plotly for interactive plots
     p_plotly <- ggplotly(gg, tooltip = "text")
     
     return(p_plotly)
-    
-    
-    
   })
   
   output$manpower_summation_current <- renderText({
@@ -1127,3 +1132,4 @@ server <- function(input, output, session) {
   })
   
 }
+
