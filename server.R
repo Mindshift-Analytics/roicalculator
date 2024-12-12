@@ -742,12 +742,16 @@ server <- function(input, output, session) {
     # Create bar plot using ggplot2
     # Assuming 'data' is already prepared
     p <- ggplot(data) +
-      geom_bar(aes(x=Category, y=original, fill="original_col", text=orig_explanation), stat = "identity", position = position_dodge(width = 0.8)) +
-      geom_bar(aes(x=Category, y=saved, fill="saved_col", text=saved_explanation), stat = "identity", position = position_dodge(width = 0.8), width = 0.6) +
-      geom_text(aes(x=Category, y=saved/2, label=format_indian(saved)), vjust=0, size=5, color="white") +
-      scale_fill_manual(values = c("original_col" = "blue", "saved_col" = "orange")) +
+      geom_bar(aes(x=Category, y=saved, fill="saved_col", text=saved_explanation), 
+               stat = "identity", position = "dodge") +  # Single bar for "saved"
+      geom_text(aes(x=Category, y=saved/2, label=format_indian(saved)), 
+                vjust=0, size=5, color="white") +  # Label in the middle of the bar
+      scale_fill_manual(values = c("saved_col" = "orange")) +  # Fill color for saved
       labs(fill = "Saving Comparisons") +
       theme(legend.position = "none")
+
+
+
     
     # Convert ggplot object to plotly for interactive plots
     p_plotly <- ggplotly(p, tooltip = c("x", "text"))
