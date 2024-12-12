@@ -742,13 +742,12 @@ server <- function(input, output, session) {
     # Create bar plot using ggplot2
     # Assuming 'data' is already prepared
     p <- ggplot(data) +
-      geom_bar(aes(x=Category, y=saved, fill="saved_col", text=saved_explanation), 
-               stat = "identity", position = "dodge") +  # Single bar for "saved"
-      geom_text(aes(x=Category, y=saved/2, label=format_indian(saved)), 
-                vjust=0, size=5, color="white") +  # Label in the middle of the bar
-      scale_fill_manual(values = c("saved_col" = "orange")) +  # Fill color for saved
+      geom_bar(aes(x=Category, y=original, fill="saved_col", text=orig_explanation), stat = "identity", position = "dodge") +
+      geom_text(aes(x=Category, y=original/2, label=format_indian(original)), vjust=0, size=5, color="white") +  # Change to 'original' here
+      scale_fill_manual(values = c("original_col" = "blue")) +  # Removed the "saved_col" fill
       labs(fill = "Saving Comparisons") +
       theme(legend.position = "none")
+
 
 
 
