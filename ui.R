@@ -443,6 +443,79 @@ ui <- shinyUI(fluidPage(
                         )
                       )
              ),
+             tabPanel("Rentals",
+               fluidPage(
+                 div(class="title_container",
+                   h2("HEMM Rental Optimization")
+                 ),
+                 
+                 sidebarLayout(
+                   sidebarPanel(
+                     numericInput("rented_hemms", 
+                                 "Number of Rented HEMMs:",
+                                 min = 1, 
+                                 max = as.numeric(input$hemm_count),
+                                 value = 1),
+                     
+                     numericInput("current_utilization",
+                                 "Current Average Utilization (%):",
+                                 min = 0,
+                                 max = 100,
+                                 value = 60),
+                     
+                     sliderInput("improvement_target",
+                                 "Expected Utilization Improvement (%):",
+                                 min = 0,
+                                 max = 20,
+                                 value = 10,
+                                 step = 1),
+                     
+                     numericInput("rental_rate",
+                                 "Average Rental per HEMM (INR/month):",
+                                 min = 0,
+                                 value = 50000)
+                   ),
+                   
+                   mainPanel(
+                     fluidRow(
+                       column(12,
+                         div(class = "well",
+                           h3("Optimization Results"),
+                           fluidRow(
+                             column(6,
+                               h4("Current Monthly Cost:"),
+                               textOutput("current_rental_cost"),
+                               h4("Optimized Monthly Cost:"),
+                               textOutput("optimized_rental_cost")
+                             ),
+                             column(6,
+                               h4("Potential HEMM Reduction:"),
+                               textOutput("hemm_reduction"),
+                               h4("Annual Savings:"),
+                               textOutput("annual_rental_savings")
+                             )
+                           )
+                         )
+                       )
+                     ),
+                     
+                     fluidRow(
+                       column(12,
+                         h3("Detailed Analysis"),
+                         gt::gt_output("rental_optimization_table")
+                       )
+                     ),
+                     
+                     fluidRow(
+                       column(12,
+                         h3("Cost Comparison"),
+                         plotlyOutput("rental_savings_plot")
+                       )
+                     )
+                   )
+                 )
+               )
+             )
   )
 )
 )
