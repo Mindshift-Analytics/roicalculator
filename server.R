@@ -619,7 +619,7 @@ server <- function(input, output, session) {
     saved_explanation <- c(
       
       paste("With a predicted reduction of",input$manpower_reduction_dispatcher," in <b>Fuel Dispatchers<b>, Updated Cost is: <b>₹",format_indian(cost.df()$Saved[1]),"/-</b>"), #Dispatcher
-      paste("With a predicted reduction of",input$manpower_reduction_logger," in <b>Fuel Data Loggers<b>, Updated Cost is: <b>₹",format_indian(cost.df()$Saved[2]),"/-</b>"), #Logger
+      paste("With a predicted reduction of",input$manpower_reduction_logger," in <b>Fuel Data Loggers<b>, Updated Cost is: <b>��",format_indian(cost.df()$Saved[2]),"/-</b>"), #Logger
       paste("With a predicted reduction of",input$manpower_reduction_dte," in <b>Data Entry Operators<b>, Updated Cost is: <b>₹",format_indian(cost.df()$Saved[3]),"/-</b>"), #Data Entry Operator
       paste("With a predicted reduction of",input$manpower_reduction_accountant," in <b>Accountants<b>, Updated Cost is: <b>₹",format_indian(cost.df()$Saved[4]),"/-</b>") #Accountant
     )
@@ -1133,6 +1133,98 @@ server <- function(input, output, session) {
       )
     
     fig
+  })
+  
+  # Rental calculations
+  rental_values <- reactive({
+    req(input$rented_hemms, input$current_utilization, 
+        input$improvement_target, input$rental_rate)
+    
+    current_util <- input$current_utilization / 100
+    improvement <- input$improvement_target / 100
+    new_util <- min(current_util + improvement, 1)
+    
+    current_hemms <- input$rented_hemms
+    required_hemms <- floor(current_hemms * (current_util / new_util))
+    hemm_reduction <- current_hemms - required_hemms
+    
+    monthly_cost_current <- current_hemms * input$rental_rate
+    monthly_cost_optimized <- required_hemms * input$rental_rate
+    monthly_savings <- monthly_cost_current - monthly_cost_optimized
+    annual_savings <- monthly_savings * 12
+    
+    data.frame(
+      current_hemms = current_hemms,
+      required_hemms = required_hemms,
+      hemm_reduction = hemm_reduction,
+      monthly_cost_current = monthly_cost_current,
+      monthly_cost_optimized = monthly_cost_optimized,
+      monthly_savings = monthly_savings,
+      annual_savings = annual_savings
+    )
+  })
+  
+  # Render outputs using the existing format_indian function
+  output$current_rental_cost <- renderText({
+    paste("₹", format_indian(rental_values()$monthly_cost_current))
+  })
+  
+  output$optimized_rental_cost <- renderText({
+    paste("₹", format_indian(rental_values()$monthly_cost_optimized))
+  })
+  
+  output$hemm_reduction <- renderText({
+    rental_values()$hemm_reduction
+  })
+  
+  output$annual_rental_savings <- renderText({
+    paste("₹", format_indian(rental_values()$annual_savings))
+  })
+  
+  # Table using gt like other tables in the app
+  output$rental_optimization_table <- render_gt({
+    data <- data.frame(
+      Metric = c("Current HEMMs", "Optimized HEMMs", "Monthly Savings", "Annual Savings"),
+      Value = c(
+        rental_values()$current_hemms,
+        rental_values()$required_hemms,
+        paste("₹", format_indian(rental_values()$monthly_savings)),
+        paste("₹", format_indian(rental_values()$annual_savings))
+      )
+    )
+    
+    gt(data) %>%
+      tab_header(
+        title = md("Rental Optimization Analysis"),
+        subtitle = md("Impact of Utilization Improvement")
+      ) %>%
+      tab_style(
+        style = list(
+          cell_text(weight = "bold")
+        ),
+        locations = cells_column_labels(everything())
+      )
+  })
+  
+  # Plotly visualization matching app style
+  output$rental_savings_plot <- renderPlotly({
+    data <- data.frame(
+      Category = c("Current Cost", "Optimized Cost"),
+      Value = c(rental_values()$monthly_cost_current, 
+                rental_values()$monthly_cost_optimized)
+    )
+    
+    p <- ggplot(data, aes(x = Category, y = Value, fill = Category)) +
+      geom_bar(stat = "identity") +
+      geom_text(aes(label = paste("₹", format_indian(Value))), 
+                position = position_stack(vjust = 0.5), color = "white") +
+      scale_fill_manual(values = c("blue", "orange")) +
+      theme_minimal() +
+      labs(title = "Monthly Rental Cost Comparison",
+           y = "Cost (INR)") +
+      theme(legend.position = "none")
+    
+    ggplotly(p)
   })
   
 }
