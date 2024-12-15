@@ -366,7 +366,17 @@ ui <- shinyUI(fluidPage(
                               )
                       )
              ),
-             
+             tabPanel("Savings Over Time",   # New tab
+    sidebarLayout(
+    sidebarPanel(
+      sliderInput("years", "Select Years:", min = 0, max = 10, value = 5)
+    ),
+    mainPanel(
+      plotOutput("savingsPlot")  # Output for dynamic bar plot
+    )
+  )
+)
+
              
              
              
