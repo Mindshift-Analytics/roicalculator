@@ -1135,4 +1135,63 @@ server <- function(input, output, session) {
     fig
   })
   
+  # Calculate base savings dynamically based on user inputs
+  base_savings <- reactive({
+    # Calculate total savings from manpower, pilferage, and idling
+    manpower_savings <- cost.df()$Saved[1] + cost.df()$Saved[2] + cost.df()$Saved[3] + cost.df()$Saved[4]
+    pilferage_savings <- pilferage_values()$vol_saved_yearly * 86  # Assuming ₹86 per litre
+    idling_savings <- (idle_total()$idling_all_ldp - idle_total()$idle_mod_all_consump_lpd) * 365 * 86
+    
+    total_savings <- manpower_savings + pilferage_savings + idling_savings
+    total_savings
+  })
+
+  output$total_savings_text <- renderText({
+    years <- input$years_slider
+    total_savings <- base_savings() * years  # Total savings over the selected years
+    paste("Total Projected Savings over", years, "year(s): ₹", format_indian(total_savings))
+  })
+
+  output$savings_projection_plot <- renderPlotly({
+    years <- input$years_slider
+    projected_savings <- base_savings() * (0:years)  # Cumulative savings over the years
+    
+    # Create a data frame for plotting
+    savings_data <- data.frame(
+      Year = 0:years,
+      Savings = projected_savings
+    )
+    
+    # Create the bar plot
+    gg <- ggplot(savings_data, aes(x = Year, y = Savings)) +
+      geom_bar(stat = "identity", fill = "blue") +
+      labs(title = "Projected Savings Over Time",
+           x = "Years",
+           y = "Projected Savings (₹)") +
+      theme_minimal()
+    
+    ggplotly(gg)
+  })
+
+  output$savings_comparison_plot <- renderPlotly({
+    years <- input$years_slider
+    projected_savings <- base_savings() * years  # Total projected savings for the selected years
+    
+    # Current cost (for comparison)
+    current_cost <- 10000000  # Example current cost
+    savings_data <- data.frame(
+      Category = c("Current Cost", "Projected Savings"),
+      Amount = c(current_cost, projected_savings)  # Use the total projected savings
+    )
+    
+    # Create the comparison bar plot
+    gg <- ggplot(savings_data, aes(x = Category, y = Amount, fill = Category)) +
+      geom_bar(stat = "identity") +
+      labs(title = "Comparison of Current Costs vs Projected Savings",
+           y = "Amount (₹)") +
+      theme_minimal() +
+      scale_fill_manual(values = c("Current Cost" = "red", "Projected Savings" = "green"))
+    
+    ggplotly(gg)
+  })
 }
