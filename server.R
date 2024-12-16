@@ -1135,10 +1135,26 @@ server <- function(input, output, session) {
     fig
   })
   
+  # Calculate base savings dynamically based on user inputs
+  base_savings <- reactive({
+    # Calculate total savings from manpower, pilferage, and idling
+    manpower_savings <- cost.df()$Saved[1] + cost.df()$Saved[2] + cost.df()$Saved[3] + cost.df()$Saved[4]
+    pilferage_savings <- pilferage_values()$vol_saved_yearly * 86  # Assuming ₹86 per litre
+    idling_savings <- (idle_total()$idling_all_ldp - idle_total()$idle_mod_all_consump_lpd) * 365 * 86
+    
+    total_savings <- manpower_savings + pilferage_savings + idling_savings
+    total_savings
+  })
+
+  output$total_savings_text <- renderText({
+    years <- input$years_slider
+    total_savings <- base_savings() * years  # Total savings over the selected years
+    paste("Total Projected Savings over", years, "year(s): ₹", format_indian(total_savings))
+  })
+
   output$savings_projection_plot <- renderPlotly({
     years <- input$years_slider
-    base_savings <- 1000000  # Base savings per year
-    projected_savings <- base_savings * (0:years)  # Cumulative savings over the years
+    projected_savings <- base_savings() * (0:years)  # Cumulative savings over the years
     
     # Create a data frame for plotting
     savings_data <- data.frame(
@@ -1156,24 +1172,16 @@ server <- function(input, output, session) {
     
     ggplotly(gg)
   })
-  
-  output$total_savings_text <- renderText({
-    years <- input$years_slider
-    base_savings <- 1000000  # Base savings per year
-    total_savings <- base_savings * years  # Total savings over the selected years
-    paste("Total Projected Savings over", years, "year(s): ₹", format_indian(total_savings))
-  })
-  
+
   output$savings_comparison_plot <- renderPlotly({
     years <- input$years_slider
-    base_savings <- 1000000  # Base savings per year
-    projected_savings <- base_savings * (0:years)  # Cumulative savings over the years
+    projected_savings <- base_savings() * years  # Total projected savings for the selected years
     
     # Current cost (for comparison)
     current_cost <- 10000000  # Example current cost
     savings_data <- data.frame(
       Category = c("Current Cost", "Projected Savings"),
-      Amount = c(current_cost, projected_savings[years + 1])  # Use the last value for projected savings
+      Amount = c(current_cost, projected_savings)  # Use the total projected savings
     )
     
     # Create the comparison bar plot
