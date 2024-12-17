@@ -367,7 +367,37 @@ ui <- shinyUI(fluidPage(
                       )
              ),
              
-             
+             tabPanel(
+               title = "Cost vs Benefit Analysis",
+               icon = icon("chart-line"),
+               fluidPage(
+                 h3("Cost vs Benefit Analysis"),
+                 p("This tab analyzes the cumulative costs and benefits over 5 years."),
+                 
+                 # Input sliders
+                 fluidRow(
+                   column(6,
+                          sliderInput(
+                            "digitisation_cost", 
+                            "Cost of digitisation solution per HEMM per year (₹):", 
+                            min = 2000, max = 20000, value = 6000, step = 100
+                          )
+                   ),
+                   column(6,
+                          sliderInput(
+                            "capex_cost", 
+                            "One-time CAPEX cost per HEMM (₹):", 
+                            min = 10000, max = 50000, value = 30000, step = 1000
+                          )
+                   )
+                 ),
+                 
+                 # Output plot
+                 fluidRow(
+                   column(12, plotOutput("cost_vs_benefit_plot"))
+                 )
+               )
+             ),
              
              
              # MOVEMENT TAB
