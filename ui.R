@@ -120,9 +120,9 @@ ui <- shinyUI(fluidPage(
                                      fluidRow(column(9,h3(" Step 2: CTC Input")),column(3,div(class="right-align",br(),actionButton("manpower_ctc_info_button", "Info", icon = icon("info-circle"), class = "btn-info")))),
                                      
                                      sliderInput("fuel_dispatcher_cost","Avg Annual CTC of Fuel Dispatcher: ",value=500000,min=100000,max=1000000),
-                                     sliderInput("fuel_logger_cost","Avg Annual CTC of Fuel Logger: ",,value=150000,min=100000,max=300000),
+                                     sliderInput("fuel_logger_cost","Avg Annual CTC of Fuel Logger: ",value=150000,min=100000,max=300000),
                                      sliderInput("data_entry_cost","Avg Annual CTC of Data Entry Operator FTE: ",value=300000,min=100000,max=500000),
-                                     sliderInput("accountant_cost","Avg Annual CTC of Accountant FTE: ",value=500000,min=100000,max=800000),
+                                     sliderInput("accountant_cost","Avg Annual CTC of Accountant FTE: ",value=500000,min=100000,max=800000)
                                    )
                             )
                           )
@@ -134,7 +134,7 @@ ui <- shinyUI(fluidPage(
                                    tableOutput("manpower_data")
                                  ),
                                  fluidRow(
-                                   plotlyOutput("histogram"),
+                                   plotlyOutput("histogram")
                                  )
                           ),
                           column(4,
@@ -150,7 +150,7 @@ ui <- shinyUI(fluidPage(
                                  h3("How you can achieve savings with Mindshift:"),
                                  p("Mindshift offers the capability to automate manual data entry, updates, and analysis processes, facilitating a transition to a time-efficient fuel management method.\n
 
-                                   This transition leads to cost savings and increased productivity for your organization.")),
+                                   This transition leads to cost savings and increased productivity for your organization."))
                         )
                         )
                       ),
@@ -160,7 +160,7 @@ ui <- shinyUI(fluidPage(
                               tags$ul(
                                 tags$li(
                                   h3("Fuel Dispatchers:"),
-                                  p("A fuel dispatcher oversees and coordinates the scheduling of diesel bowser trips to Heavy Earth Moving Machinery (HEMM) in each operational shift, ensuring timely refueling services are provided as required."),
+                                  p("A fuel dispatcher oversees and coordinates the scheduling of diesel bowser trips to Heavy Earth Moving Machinery (HEMM) in each operational shift, ensuring timely refueling services are provided as required.")
                                 ),
                                 tags$li(
                                   h3("Fuel Loggers:"),
@@ -175,7 +175,7 @@ ui <- shinyUI(fluidPage(
                                   h3("Accountants:"),
                                   p("Accountants are tasked with the responsibility of verifying the accuracy of data entered into the backend system, rectifying any discrepancies as needed."),
                                   p("They monitor the operational hours of Heavy Earth Moving Machinery (HEMM) and reconcile fuel consumption data with fuel dispensing records.")
-                                ),
+                                )
                               )
                       ),
                       bsModal("manpower_ctc_info_modal", "Manpower Roles Information:", "manpower_ctc_info_button", size = "large",
@@ -255,7 +255,7 @@ ui <- shinyUI(fluidPage(
                                    tags$li(
                                      h5("Detailed Reporting:"),
                                      p("Comprehensive reporting tools provide detailed insights into fuel consumption patterns, helping in identifying specific areas or operations prone to pilferage.")
-                                   ),
+                                   )
                                  )
                           )
                         )
@@ -278,7 +278,7 @@ ui <- shinyUI(fluidPage(
                                   h3("Inventory Discrepancies:"),
                                   p("Regular pilferage creates discrepancies in fuel inventory records, complicating audits and inventory management processes."),
                                   p("This can lead to further inefficiencies and potential inaccuracies in financial reporting.")
-                                ),
+                                )
                               )
                       )
              ),
@@ -345,11 +345,11 @@ ui <- shinyUI(fluidPage(
                               tags$ul(
                                 tags$li(
                                   h3("Shift Utilization Analysis:"),
-                                  p("During shifts, the machine operates for a certain percentage of the total time, while the remaining time is categorized as off time."),
+                                  p("During shifts, the machine operates for a certain percentage of the total time, while the remaining time is categorized as off time.")
                                 ),
                                 tags$li(
                                   h3("Utilization Breakdown:"),
-                                  p(" Utilization time is further divided into idle time and loaded time."),
+                                  p(" Utilization time is further divided into idle time and loaded time.")
                                 ),
                                 tags$li(
                                   h3("Idle State:"),
@@ -366,6 +366,30 @@ ui <- shinyUI(fluidPage(
                               )
                       )
              ),
+             
+             tabPanel("Rentals",
+                      fluidPage(
+                        h3("Rental Savings Calculator"),
+                        fluidRow(
+                          column(6,
+                                 numericInput("rented_hemm", "Number of HEMMs Rented:", 
+                                              value = 10, min = 0, max = 50), # Adjust the max limit dynamically based on Universal Values.
+                                 numericInput("avg_utilisation", "Current Average Utilisation (%):", 
+                                              value = 60, min = 0, max = 100),
+                                 sliderInput("utilisation_improvement", "Expected Utilisation Improvement (%):", 
+                                             min = 0, max = 20, value = 10, step = 1),
+                                 numericInput("rental_cost", "Average Rental Cost per HEMM (INR/month):", 
+                                              value = 50000, min = 0)
+                          ),
+                          column(6,
+                                 h4("Savings Summary"),
+                                 tableOutput("rental_savings_table"),
+                                 h4("Savings Visualization"),
+                                 plotlyOutput("rental_savings_chart")
+                          )
+                        )
+                      ),
+            
              
              
              
@@ -408,6 +432,7 @@ ui <- shinyUI(fluidPage(
              #          )
              # ),
              
+        
              tabPanel("Summary",
                       fluidPage(
                         h1("Overall Savings"),
