@@ -101,6 +101,52 @@ server <- function(input, output, session) {
     )
   })
   
+  # Simulated benefits data (replace this with real data from other tabs)
+  simulated_benefits <- c(50000, 60000, 65000, 70000, 75000)
+  
+  # Reactive calculation for costs and benefits
+  cost_benefit_data <- reactive({
+    opex <- input$digitisation_cost
+    capex <- input$capex_cost
+    
+    # Costs: Year 1 includes CAPEX + OPEX, Years 2-5 include only OPEX
+    costs <- c(capex + opex, rep(opex, 4))
+    cumulative_costs <- cumsum(costs)
+    
+    # Benefits: Simulated values
+    cumulative_benefits <- cumsum(simulated_benefits)
+    
+    # Combining into a data frame
+    data.frame(
+      Year = 1:5,
+      Cumulative_Costs = cumulative_costs,
+      Cumulative_Benefits = cumulative_benefits
+    )
+  })
+  
+  # Rendering the plot using ggplot2
+  output$cost_vs_benefit_plot <- renderPlot({
+    plot_data <- cost_benefit_data()
+    
+    # Checking if the data is available
+    if (is.null(plot_data)) {
+      return(NULL)
+    }
+  
+    library(ggplot2)
+    ggplot(plot_data, aes(x = Year)) +
+      geom_line(aes(y = Cumulative_Costs, color = "Cumulative Costs"), size = 1.2) +
+      geom_line(aes(y = Cumulative_Benefits, color = "Cumulative Benefits"), size = 1.2) +
+      scale_color_manual(values = c("Cumulative Costs" = "red", "Cumulative Benefits" = "green")) +
+      labs(
+        title = "Cumulative Costs vs Cumulative Benefits",
+        x = "Year",
+        y = "Amount (₹)",
+        color = "Legend"
+      ) +
+      theme_minimal()
+  })
+  
   pilferage_values <- reactive({
     ur_daily_vol <- input$ur_day_count * input$ur_day_vol
     under_reporting_yearly =  ur_daily_vol * 365
@@ -266,6 +312,7 @@ server <- function(input, output, session) {
   # ********************************************
   # ********************************************
   # ********************************************
+  
   
   
   # MANPOWER MENU BAR
