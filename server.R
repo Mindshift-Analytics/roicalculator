@@ -137,6 +137,8 @@ server <- function(input, output, session) {
     )
   })
   
+  
+  
   cost.df <- reactive({
     dispatcher_reduced_cost = input$manpower_reduction_dispatcher * input$fuel_dispatcher_cost
     logger_reduced_cost = input$manpower_reduction_logger * input$fuel_logger_cost
@@ -167,6 +169,36 @@ server <- function(input, output, session) {
         saving_dto,
         saving_accountant
       )
+    )
+  })
+  
+  rental_values <- reactive({
+    
+    validate(
+      need(input$rented_hemm_count > 0, "Please enter a positive number for Rented HEMMs."),
+      need(input$rented_hemm_count <= input$hemm_count, "Rented HEMMs cannot exceed total HEMMs."),
+      need(input$current_utilization > 0 && input$current_utilization <= 100, 
+           "Utilization must be between 0 and 100%"),
+      need(input$rental_cost_per_hemm > 0, "Please enter a positive rental cost.")
+    )
+    
+    
+    improved_util = min(100, input$current_utilization + input$utilization_improvement)
+    
+    
+    reduction_ratio = input$utilization_improvement / 100
+    hemm_reduction = floor(input$rented_hemm_count * reduction_ratio)
+    
+    
+    monthly_savings = hemm_reduction * input$rental_cost_per_hemm
+    annual_savings = monthly_savings * 12
+    
+    data.frame(
+      improved_utilization = improved_util,
+      hemm_reduction = hemm_reduction,
+      monthly_savings = monthly_savings,
+      annual_savings = annual_savings,
+      final_hemm_count = input$rented_hemm_count - hemm_reduction
     )
   })
   
@@ -261,6 +293,8 @@ server <- function(input, output, session) {
       newText
     })
   }
+  
+  
   
   # ********************************************
   # ********************************************
@@ -1025,7 +1059,111 @@ server <- function(input, output, session) {
     ggplotly(gg, tooltip = "text")
   })
   
+  # Rental tab outputs
+  output$rental_savings_table <- render_gt({
+    data <- data.frame(
+      Metric = c(
+        "Current HEMM Count",
+        "Optimized HEMM Count",
+        "HEMM Reduction",
+        "Current Utilization",
+        "Improved Utilization"
+      ),
+      Value = c(
+        input$rented_hemm_count,
+        rental_values()$final_hemm_count,
+        rental_values()$hemm_reduction,
+        paste0(input$current_utilization, "%"),
+        paste0(rental_values()$improved_utilization, "%")
+      )
+    )
+    
+    gt(data) %>%
+      tab_header(
+        title = md("Rental Fleet Optimization Analysis"),
+        subtitle = md("Impact of Utilization Improvement")
+      ) %>%
+      tab_style(
+        style = list(
+          cell_text(weight = "bold")
+        ),
+        locations = cells_column_labels(everything())
+      ) %>%
+      tab_style(
+        style = list(
+          cell_fill(color = "lightgreen"),
+          cell_borders(
+            sides = c("top", "bottom"),
+            color = "darkgreen",
+            weight = px(2.5)
+          )
+        ),
+        locations = cells_body(
+          columns = c(Value),
+          rows = c(2, 3)
+        )
+      ) %>%
+      tab_style(
+        style = cell_borders(
+          sides = c("top", "bottom"),
+          color = "gray",
+          weight = px(1)
+        ),
+        locations = cells_body(
+          columns = everything()
+        )
+      )
+  })
   
+  output$rental_monthly_savings <- renderText({
+    paste("₹", format_indian(rental_values()$monthly_savings))
+  })
+  
+  output$rental_annual_savings <- renderText({
+    paste("₹", format_indian(rental_values()$annual_savings))
+  })
+  
+  output$rental_savings_plot <- renderPlotly({
+    data <- data.frame(
+      Category = c("Current Fleet", "Optimized Fleet"),
+      Count = c(input$rented_hemm_count, rental_values()$final_hemm_count),
+      Utilization = c(input$current_utilization, rental_values()$improved_utilization)
+    )
+    
+    p <- ggplot(data) +
+      geom_bar(aes(x = Category, y = Count, fill = Category), 
+               stat = "identity", 
+               position = position_dodge(width = 0.8),
+               width = 0.7) +
+      geom_text(aes(x = Category, 
+                    y = Count/2,  # Position text in middle of bar
+                    label = sprintf("%d\n(%d%%)", Count, Utilization)),
+                position = position_dodge(width = 0.8),
+                color = "white",  # White text for better contrast
+                size = 5,         # Larger text size
+                fontface = "bold") +
+      scale_fill_manual(values = c("blue", "orange")) +
+      labs(title = "Fleet Size and Utilization Comparison",
+           y = "Number of HEMMs",
+           x = "") +  # Remove x-axis label
+      theme_minimal() +
+      theme(
+        legend.position = "none",
+        axis.text = element_text(size = 12),
+        axis.title = element_text(size = 14),
+        plot.title = element_text(size = 16, hjust = 0.5),
+        panel.grid.major.x = element_blank()  # Remove vertical grid lines
+      ) +
+      scale_y_continuous(
+        expand = expansion(mult = c(0, 0.2))  # Add more space at top
+      )
+    
+    ggplotly(p, tooltip = c("y", "text")) %>%
+      layout(
+        hoverlabel = list(bgcolor = "white"),
+        showlegend = FALSE
+      )
+  })
   
   
   
@@ -1094,16 +1232,21 @@ server <- function(input, output, session) {
     #idling sum
     idle_sum <- (idle_total()$idling_all_ldp - idle_total()$idle_mod_all_consump_lpd)*365*86
     
-    x <- list("Manpower", "Pilferage", "Idling", "Annual Sum")
-    measure <- c("relative", "relative", "relative", "total")
-    text <- c("Manpower Savings", "Pilferage Savings", "Idling Savings","Total Sum (₹)")
-    y <- c(mp_sum, pl_sum, idle_sum, mp_sum + pl_sum + idle_sum)
-    labels <- c(format_indian(mp_sum), format_indian(pl_sum), format_indian(idle_sum), format_indian(mp_sum + pl_sum + idle_sum))
+    # rental sum
+    rental_sum <- rental_values()$annual_savings
+    
+    
+    x <- list("Manpower", "Pilferage", "Idling", "Rentals", "Annual Sum")
+    measure <- c("relative", "relative", "relative", "relative", "total")
+    text <- c("Manpower Savings", "Pilferage Savings", "Idling Savings", "Rental Savings", "Total Sum (₹)")
+    y <- c(mp_sum, pl_sum, idle_sum, rental_sum, mp_sum + pl_sum + idle_sum + rental_sum)
+    labels <- c(format_indian(mp_sum), format_indian(pl_sum), format_indian(idle_sum), format_indian(rental_sum), format_indian(mp_sum + pl_sum + idle_sum + rental_sum))
     explanation <- c(
       paste("Value saved from ManPower: <b>₹",format_indian(mp_sum),"/-</b>"),
       paste("Value saved from Pilferage: <b>₹",format_indian(pl_sum),"/-</b>"),
       paste("Value saved from Idling: <b>₹",format_indian(idle_sum),"/-</b>"),
-      paste("Yearly Savings by using <b>Mindshift:  ₹",format_indian(mp_sum + pl_sum + idle_sum),"/-</b>")
+      paste("Value saved from Rentals: <b>₹",format_indian(rental_sum),"/-</b>"),
+      paste("Yearly Savings by using <b>Mindshift:  ₹",format_indian(mp_sum + pl_sum + idle_sum + rental_sum),"/-</b>")
     )
     
     data <- data.frame(

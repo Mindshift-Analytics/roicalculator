@@ -184,6 +184,8 @@ ui <- shinyUI(fluidPage(
              ),
              
              
+             
+             
              # PILFERAGE
              
              tabPanel("Pilferage",
@@ -367,9 +369,85 @@ ui <- shinyUI(fluidPage(
                       )
              ),
              
-             
-             
-             
+             tabPanel("Rentals",
+                      fluidPage(
+                        fluidRow(
+                          column(9, h3("Rental HEMM Utilization Analysis")),
+                          column(3, div(class="right-align", br(),
+                                        actionButton("rental_info_button", "More Info", 
+                                                     icon = icon("info-circle"), 
+                                                     class = "btn-info")))
+                        ),
+                        sidebarLayout(
+                          sidebarPanel(
+                            numericInput("rented_hemm_count", "Number of Rented HEMMs:", 
+                                         value = 10, 
+                                         min = 1),
+                            numericInput("current_utilization", "Current Average Utilization (%):", 
+                                         value = 60, 
+                                         min = 0, 
+                                         max = 100),
+                            sliderInput("utilization_improvement", "Expected Utilization Improvement (%):", 
+                                        value = 10, 
+                                        min = 0, 
+                                        max = 20),
+                            numericInput("rental_cost_per_hemm", "Average Rental per HEMM (₹/month):", 
+                                         value = 50000, 
+                                         min = 0)
+                          ),
+                          mainPanel(
+                            fluidRow(
+                              column(8,
+                                     gt_output("rental_savings_table")
+                              ),
+                              column(4,
+                                     h4("Monthly Savings:"),
+                                     verbatimTextOutput("rental_monthly_savings"),
+                                     h4("Annual Savings:"),
+                                     verbatimTextOutput("rental_annual_savings"),
+                                     h3("How you can achieve savings with Mindshift:"),
+                                     p("By improving HEMM utilization through real-time tracking and analytics, 
+              you can optimize your rental fleet size and reduce rental costs significantly."),
+                                     tags$ul(
+                                       tags$li(
+                                         h5("Real-Time Monitoring:"),
+                                         p("Track actual utilization rates of each rented HEMM to identify optimization opportunities.")
+                                       ),
+                                       tags$li(
+                                         h5("Usage Analytics:"),
+                                         p("Analyze patterns to make data-driven decisions about fleet size requirements.")
+                                       )
+                                     )
+                              )
+                            ),
+                            fluidRow(
+                              column(12,
+                                     plotlyOutput("rental_savings_plot")
+                              )
+                            )
+                          )
+                        )
+                      ),
+                      # Add modal for info button
+                      bsModal("rental_info_modal", "Rental Optimization Information:", "rental_info_button", 
+                              size = "large",
+                              tags$ul(
+                                tags$li(
+                                  h3("Utilization Analysis:"),
+                                  p("Monitors current HEMM utilization rates and identifies opportunities for optimization.")
+                                ),
+                                tags$li(
+                                  h3("Cost Savings:"),
+                                  p("Calculates potential savings from fleet size optimization based on improved utilization rates.")
+                                ),
+                                tags$li(
+                                  h3("Implementation Strategy:"),
+                                  p("Provides actionable insights for reducing rental costs while maintaining operational efficiency.")
+                                )
+                              )
+                      )
+             ),
+   
              # MOVEMENT TAB
              
              # tabPanel("Movement Statistics",
