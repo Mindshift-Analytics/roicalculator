@@ -6,7 +6,7 @@ library(DT)
 library(plotly)
 library(ggplot2)
 library(shinyalert)
-
+library(gt)
 
 
 ui <- shinyUI(fluidPage(
