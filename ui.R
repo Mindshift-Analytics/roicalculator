@@ -447,14 +447,14 @@ ui <- shinyUI(fluidPage(
                       fluidPage(
                         h3("Projected Savings Over Time"),
                         sliderInput("years_slider", "Select Number of Years:", 
-                                    min = 0, max = 10, value = 0),
+                                    min = 1, max = 10, value = 5),
                         textOutput("total_savings_text"),
                         plotlyOutput("savings_projection_plot"),
-                        br(),
                         h4("Comparison of Current Costs vs Projected Savings"),
                         plotlyOutput("savings_comparison_plot")
                       )
              )
+             
   )
 )
 )

@@ -28,23 +28,23 @@ server <- function(input, output, session) {
   
   # values-reactive Values relevant across all calculations put in a reactive for easier access
   values <- reactive({
-  # Fallback logic if values are missing
-  shift_count <- ifelse(is.null(input$shift_count) || input$shift_count <= 0, 1, input$shift_count)
-  hemm_count <- ifelse(is.null(input$hemm_count) || input$hemm_count <= 0, 1, input$hemm_count)
-  fuel_consumption <- ifelse(is.null(input$hemm_daily_consump) || input$hemm_daily_consump <= 0, 100, input$hemm_daily_consump)
-  truck_count <- ifelse(is.null(input$truck_count) || input$truck_count <= 0, 1, input$truck_count)
-  logger_count <- ifelse(is.null(input$logger_count_per_bowser) || input$logger_count_per_bowser <= 0, 1, input$logger_count_per_bowser)
-
-  # validation message for input values
-  validate(
-    need(input$shift_count > 0, "Please enter a positive number for Shift Count."),
-    need(input$hemm_count > 0, "Please enter a positive number for Number of HEMM."),
-    need(input$hemm_daily_consump > 0, "Please enter a positive number for HEMM Fuel Consumption/Day."),
-    need(input$truck_count > 0, "Please enter a positive number for Number of Trucks."),
-    need(input$logger_count_per_bowser > 0, "Please enter a positive number for Number of Loggers per Bowser.")
+    # Fallback logic if values are missing
+    shift_count <- ifelse(is.null(input$shift_count) || input$shift_count <= 0, 1, input$shift_count)
+    hemm_count <- ifelse(is.null(input$hemm_count) || input$hemm_count <= 0, 1, input$hemm_count)
+    fuel_consumption <- ifelse(is.null(input$hemm_daily_consump) || input$hemm_daily_consump <= 0, 100, input$hemm_daily_consump)
+    truck_count <- ifelse(is.null(input$truck_count) || input$truck_count <= 0, 1, input$truck_count)
+    logger_count <- ifelse(is.null(input$logger_count_per_bowser) || input$logger_count_per_bowser <= 0, 1, input$logger_count_per_bowser)
+    
+    # validation message for input values
+    validate(
+      need(input$shift_count > 0, "Please enter a positive number for Shift Count."),
+      need(input$hemm_count > 0, "Please enter a positive number for Number of HEMM."),
+      need(input$hemm_daily_consump > 0, "Please enter a positive number for HEMM Fuel Consumption/Day."),
+      need(input$truck_count > 0, "Please enter a positive number for Number of Trucks."),
+      need(input$logger_count_per_bowser > 0, "Please enter a positive number for Number of Loggers per Bowser.")
     )
-
-
+    
+    
     # these variables are out since they are being used for calculation in data frame
     # data frame scope prevents creation and usage in the same scope hence outside creation
     entries_per_year = req(input$fuel_entry_count) * 365
@@ -758,14 +758,14 @@ server <- function(input, output, session) {
       scale_fill_manual(values = c("saved_col" = "orange")) +
       labs(fill = "Saving Comparisons") +
       theme(legend.position = "none")
-
-
+    
+    
     
     # Convert ggplot object to plotly for interactive plots
     p_plotly <- ggplotly(p, tooltip = c("x", "text"))
-
+    
     return(p_plotly)
-
+    
   })
   
   output$pilferage_explanation <- renderText({
@@ -785,7 +785,7 @@ server <- function(input, output, session) {
     req(!is.null(input$idle_load_perc), input$idle_load_perc != 0)
     req(!is.null(input$idle_mod_on_val), input$idle_mod_on_val != 0)
     req(!is.null(input$shift_count), input$shift_count != 0)
-
+    
     
     
     off_perc = 100 - input$idle_usage_per
@@ -1134,64 +1134,76 @@ server <- function(input, output, session) {
     
     fig
   })
+  manpower_savings <- reactive({
+    total_current <- values()$dipatcher_total_cost + values()$logger_total_cost + values()$dto_total_cost + values()$accountant_total_cost
+    total_revised <- input$manpower_reduction_dispatcher * input$fuel_dispatcher_cost +
+      input$manpower_reduction_logger * input$fuel_logger_cost +
+      input$manpower_reduction_dte * input$data_entry_cost +
+      input$manpower_reduction_accountant * input$accountant_cost
+    total_current - total_revised
+  })
+  pilferage_savings <- reactive({
+    total_current <- pilferage_values()$under_reporting_yearly * 86 +
+      pilferage_values()$bowser_fuel_sold_yearly * 86
+    total_current
+  })
   
-  # Calculate base savings dynamically based on user inputs
-  base_savings <- reactive({
-    # Calculate total savings from manpower, pilferage, and idling
-    manpower_savings <- cost.df()$Saved[1] + cost.df()$Saved[2] + cost.df()$Saved[3] + cost.df()$Saved[4]
-    pilferage_savings <- pilferage_values()$vol_saved_yearly * 86  # Assuming ₹86 per litre
-    idling_savings <- (idle_total()$idling_all_ldp - idle_total()$idle_mod_all_consump_lpd) * 365 * 86
-    
-    total_savings <- manpower_savings + pilferage_savings + idling_savings
-    total_savings
+  idling_savings <- reactive({
+    total_current <- idle_total()$idling_ldp * 365 * 86
+    optimized_cost <- idle_total()$idle_mod_consump_lpd * 365 * 86
+    total_current - optimized_cost
   })
-
+  
+  
+  # 2. Total Savings Calculation
+  total_savings <- reactive({
+    sum(manpower_savings(), pilferage_savings(), idling_savings())
+  })
+  
+  # 3. Project Savings Over Time
+  savings_projection <- reactive({
+    years <- input$years_slider
+    cumsum(rep(total_savings(), years))
+  })
+  
+  # 4. Render Outputs
   output$total_savings_text <- renderText({
-    years <- input$years_slider
-    total_savings <- base_savings() * years  # Total savings over the selected years
-    paste("Total Projected Savings over", years, "year(s): ₹", format_indian(total_savings))
+    paste("Total Projected Savings over", input$years_slider, "year(s): ₹", format(total_savings() * input$years_slider, big.mark = ","))
   })
-
+  
   output$savings_projection_plot <- renderPlotly({
-    years <- input$years_slider
-    projected_savings <- base_savings() * (0:years)  # Cumulative savings over the years
-    
-    # Create a data frame for plotting
-    savings_data <- data.frame(
-      Year = 0:years,
-      Savings = projected_savings
+    df <- data.frame(
+      Year = 1:input$years_slider,
+      Savings = cumsum(rep(total_savings(), input$years_slider))
     )
+    plot_ly(df, x = ~Year, y = ~Savings, type = 'scatter', mode = 'lines+markers',
+            line = list(color = 'green')) %>%
+      layout(title = "Projected Savings Over Time",
+             xaxis = list(title = "Years"),
+             yaxis = list(title = "Cumulative Savings (₹)"))
     
-    # Create the bar plot
-    gg <- ggplot(savings_data, aes(x = Year, y = Savings)) +
-      geom_bar(stat = "identity", fill = "blue") +
-      labs(title = "Projected Savings Over Time",
-           x = "Years",
-           y = "Projected Savings (₹)") +
-      theme_minimal()
-    
-    ggplotly(gg)
   })
-
+  # Comparison of Current Costs vs Projected Savings
   output$savings_comparison_plot <- renderPlotly({
-    years <- input$years_slider
-    projected_savings <- base_savings() * years  # Total projected savings for the selected years
+    # Current Costs
+    current_costs <- c(3330000, 4534350, 47712800)  # Baseline costs: Manpower, Pilferage, Idling
     
-    # Current cost (for comparison)
-    current_cost <- 10000000  # Example current cost
-    savings_data <- data.frame(
-      Category = c("Current Cost", "Projected Savings"),
-      Amount = c(current_cost, projected_savings)  # Use the total projected savings
+    # Projected Savings
+    savings <- c(manpower_savings(), pilferage_savings(), idling_savings())
+    
+    # Create a data frame
+    df <- data.frame(
+      Category = c("Manpower", "Pilferage", "Idling"),
+      Current_Cost = current_costs,
+      Projected_Savings = savings
     )
     
-    # Create the comparison bar plot
-    gg <- ggplot(savings_data, aes(x = Category, y = Amount, fill = Category)) +
-      geom_bar(stat = "identity") +
-      labs(title = "Comparison of Current Costs vs Projected Savings",
-           y = "Amount (₹)") +
-      theme_minimal() +
-      scale_fill_manual(values = c("Current Cost" = "red", "Projected Savings" = "green"))
-    
-    ggplotly(gg)
+    # Plot using Plotly
+    plot_ly(df, x = ~Category, y = ~Current_Cost, type = 'bar', name = 'Current Cost', marker = list(color = 'red')) %>%
+      add_trace(y = ~Projected_Savings, name = 'Projected Savings', marker = list(color = 'green')) %>%
+      layout(title = "Comparison of Current Costs vs Projected Savings",
+             xaxis = list(title = "Category"),
+             yaxis = list(title = "Amount (₹)"),
+             barmode = 'group')
   })
 }
